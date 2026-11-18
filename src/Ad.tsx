@@ -12,12 +12,40 @@ import {
 } from "remotion";
 import { Audio } from "@remotion/media";
 import { loadFont } from "@remotion/google-fonts/PlusJakartaSans";
+import { loadFont as loadArabic } from "@remotion/google-fonts/NotoSansArabic";
 
-const { fontFamily } = loadFont("normal", { weights: ["500", "700", "800"], subsets: ["latin"] });
+const latin = loadFont("normal", { weights: ["500", "700", "800"], subsets: ["latin"] }).fontFamily;
+const arabic = loadArabic("normal", { weights: ["500", "700", "800"], subsets: ["arabic"] }).fontFamily;
+export const fontFamily = `${latin}, ${arabic}`;
 
-const GREEN = "#16A34A";
-const GREEN_LIGHT = "#4ADE80";
-const INK = "#050B07";
+export const GREEN = "#16A34A";
+export const GREEN_LIGHT = "#4ADE80";
+export const INK = "#050B07";
+
+export type Lang = "en" | "ur";
+const STR = {
+  en: {
+    hook: ["Running a shop", "never stops."],
+    hookChips: ["Rs 2,050", "Udhaar", "Low stock", "INV-0042", "Rs 12,271", "Out of stock", "Rs 6,754", "Cash", "Restock", "Rs 1,380"],
+    sell: { head: ["Checkout", "in seconds."], s1: "Scan", s2: "Add", s3: "Pay", offline: "Works fully offline", done: "Sale complete", change: "Change Rs 416" },
+    ledger: { head: ["Every udhaar,", "tracked."], sub: "Know exactly who owes what." },
+    profit: { head: ["Real profit.", "Every day."], label: "NET PROFIT TODAY" },
+    devices: { head: ["Phone. Web. Computer."], headV: ["Phone. Web.", "Computer."], sub: "One shop, always in sync.", c1: "Staff roles", c2: "6 languages", c3: "Offline-first" },
+    cta: { head: ["Start free today."], avail: "Available now on Google Play", web: "Web app: bytepos.vercel.app", scan: "Scan to download" },
+  },
+  ur: {
+    hook: ["دکان چلانا", "کبھی نہیں رکتا۔"],
+    hookChips: ["Rs 2,050", "ادھار", "اسٹاک کم ہے", "INV-0042", "Rs 12,271", "اسٹاک ختم", "Rs 6,754", "نقد", "ری اسٹاک", "Rs 1,380"],
+    sell: { head: ["سیکنڈوں میں", "بل بنائیں۔"], s1: "اسکین", s2: "شامل کریں", s3: "ادائیگی", offline: "انٹرنیٹ کے بغیر بھی چلتا ہے", done: "سیل مکمل", change: "باقی رقم Rs 416" },
+    ledger: { head: ["ہر ادھار کا", "حساب۔"], sub: "جانیں کس سے کیا لینا ہے۔" },
+    profit: { head: ["اصل منافع۔", "ہر روز۔"], label: "آج کا خالص منافع" },
+    devices: { head: ["فون۔ ویب۔ کمپیوٹر۔"], headV: ["فون۔ ویب۔", "کمپیوٹر۔"], sub: "ایک دکان، ہمیشہ ہم آہنگ۔", c1: "اسٹاف رولز", c2: "6 زبانیں", c3: "آف لائن فرسٹ" },
+    cta: { head: ["آج ہی مفت شروع کریں۔"], avail: "گوگل پلے پر دستیاب ہے", web: "ویب ایپ: bytepos.vercel.app", scan: "اسکین کر کے ڈاؤن لوڈ کریں" },
+  },
+};
+const LangCtx = React.createContext<{ lang: Lang; rtl: boolean; t: typeof STR.en }>({ lang: "en", rtl: false, t: STR.en });
+const useL = () => React.useContext(LangCtx);
+
 const EASE = Easing.bezier(0.16, 1, 0.3, 1);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
@@ -43,7 +71,7 @@ const useLayout = () => {
 const enter = (frame: number, fps: number, delay = 0) =>
   spring({ frame: frame - delay, fps, config: { damping: 200 }, durationInFrames: 28 });
 
-const Background: React.FC = () => {
+export const Background: React.FC = () => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const orb = (x: number, y: number, size: number, speed: number, color: string, phase: number) => (
@@ -77,25 +105,25 @@ const Background: React.FC = () => {
   );
 };
 
-const Vignette: React.FC = () => (
+export const Vignette: React.FC = () => (
   <AbsoluteFill
     style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)", pointerEvents: "none" }}
   />
 );
 
 /** A scene that fades/pushes in over `overlap` frames and out at its end, with a green light flash at the cut. */
-const Scene: React.FC<{ range: readonly [number, number]; children: React.ReactNode }> = ({ range, children }) => {
+const Scene: React.FC<{ range: readonly [number, number]; hold?: boolean; children: React.ReactNode }> = ({ range, hold, children }) => {
   const [start, end] = range;
   return (
     <Sequence from={start} durationInFrames={end - start} layout="none">
-      <SceneInner dur={end - start}>{children}</SceneInner>
+      <SceneInner dur={end - start} hold={hold}>{children}</SceneInner>
     </Sequence>
   );
 };
-const SceneInner: React.FC<{ dur: number; children: React.ReactNode }> = ({ dur, children }) => {
+const SceneInner: React.FC<{ dur: number; hold?: boolean; children: React.ReactNode }> = ({ dur, hold, children }) => {
   const frame = useCurrentFrame();
   const inP = interpolate(frame, [0, 14], [0, 1], { ...clamp, easing: EASE });
-  const outP = interpolate(frame, [dur - 12, dur], [1, 0], clamp);
+  const outP = hold ? 1 : interpolate(frame, [dur - 12, dur], [1, 0], clamp);
   const flash = interpolate(frame, [0, 4, 16], [0, 0.35, 0], clamp);
   return (
     <AbsoluteFill
@@ -121,18 +149,19 @@ const Headline: React.FC<{
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { u, vertical } = useLayout();
+  const { rtl } = useL();
   return (
-    <div style={{ fontFamily, textAlign: align, display: "flex", flexDirection: "column", gap: 10 * u }}>
+    <div style={{ fontFamily, direction: rtl ? "rtl" : "ltr", textAlign: align === "left" && rtl ? "right" : align, display: "flex", flexDirection: "column", gap: 10 * u }}>
       {lines.map((line, i) => {
         const p = enter(frame, fps, delay + i * 7);
         return (
           <div
             key={line}
             style={{
-              fontSize: (vertical ? 104 : 92) * u,
-              lineHeight: 1.04,
+              fontSize: (vertical ? 104 : 92) * u * (rtl ? 0.86 : 1),
+              lineHeight: rtl ? 1.4 : 1.04,
               fontWeight: 800,
-              letterSpacing: -2 * u,
+              letterSpacing: rtl ? 0 : -2 * u,
               color: i === accentLine ? GREEN_LIGHT : "#fff",
               opacity: p,
               translate: `0 ${interpolate(p, [0, 1], [50 * u, 0])}px`,
@@ -197,7 +226,7 @@ const Chip: React.FC<{ text: string; delay: number; icon?: React.ReactNode; tone
   );
 };
 
-const Phone: React.FC<{ w: number; children: React.ReactNode; style?: React.CSSProperties }> = ({ w, children, style }) => {
+export const Phone: React.FC<{ w: number; children: React.ReactNode; style?: React.CSSProperties }> = ({ w, children, style }) => {
   const bez = w * 0.028;
   return (
     <div
@@ -219,7 +248,7 @@ const Phone: React.FC<{ w: number; children: React.ReactNode; style?: React.CSSP
   );
 };
 
-const Shot: React.FC<{ src: string; opacity?: number; scale?: number; originY?: number }> = ({ src, opacity = 1, scale = 1, originY = 50 }) => (
+export const Shot: React.FC<{ src: string; opacity?: number; scale?: number; originY?: number }> = ({ src, opacity = 1, scale = 1, originY = 50 }) => (
   <Img
     src={staticFile(`img/${src}`)}
     style={{
@@ -257,7 +286,7 @@ const Hilite: React.FC<{ x: number; y: number; w: number; h: number; from: numbe
   );
 };
 
-const Laptop: React.FC<{ w: number; src: string; style?: React.CSSProperties }> = ({ w, src, style }) => {
+export const Laptop: React.FC<{ w: number; src: string; style?: React.CSSProperties; soft?: boolean }> = ({ w, src, style, soft }) => {
   const bez = w * 0.012;
   return (
     <div style={{ width: w, position: "relative", ...style }}>
@@ -268,7 +297,7 @@ const Laptop: React.FC<{ w: number; src: string; style?: React.CSSProperties }> 
           borderRadius: w * 0.02,
           background: "#0c0f0d",
           padding: bez,
-          boxShadow: `0 ${w * 0.05}px ${w * 0.15}px rgba(0,0,0,0.6), 0 0 ${w * 0.2}px rgba(22,163,74,0.25)`,
+          boxShadow: soft ? `0 ${w * 0.04}px ${w * 0.1}px rgba(15,40,25,0.3)` : `0 ${w * 0.05}px ${w * 0.15}px rgba(0,0,0,0.6), 0 0 ${w * 0.2}px rgba(22,163,74,0.25)`,
           border: "1px solid rgba(255,255,255,0.12)",
         }}
       >
@@ -295,15 +324,15 @@ const Check: React.FC<{ size: number }> = ({ size }) => (
   </svg>
 );
 
-const LogoBadge: React.FC<{ size: number }> = ({ size }) => (
+export const LogoBadge: React.FC<{ size: number }> = ({ size }) => (
   <div style={{ width: size, height: size, borderRadius: size * 0.24, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 ${size * 0.8}px rgba(22,163,74,0.55), 0 ${size * 0.1}px ${size * 0.3}px rgba(0,0,0,0.5)` }}>
     <Img src={staticFile("img/logo-mark.png")} style={{ width: "86%", height: "86%", objectFit: "contain" }} />
   </div>
 );
 
-const Wordmark: React.FC<{ size: number }> = ({ size }) => (
-  <div style={{ fontFamily, fontSize: size, fontWeight: 800, letterSpacing: -size * 0.03, color: "#fff", lineHeight: 1 }}>
-    Byte<span style={{ color: GREEN_LIGHT }}>POS</span>
+export const Wordmark: React.FC<{ size: number; ink?: string; accent?: string }> = ({ size, ink = "#fff", accent = GREEN_LIGHT }) => (
+  <div style={{ fontFamily, fontSize: size, fontWeight: 800, letterSpacing: -size * 0.03, color: ink, lineHeight: 1 }}>
+    Byte<span style={{ color: accent }}>POS</span>
   </div>
 );
 
@@ -336,7 +365,8 @@ const HookScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { width, height, u, vertical } = useLayout();
-  const chips = ["Rs 2,050", "Udhaar", "Low stock", "INV-0042", "Rs 12,271", "Out of stock", "Rs 6,754", "Cash", "Restock", "Rs 1,380"];
+  const { t } = useL();
+  const chips = t.hookChips;
   return (
     <AbsoluteFill>
       {chips.map((c, i) => {
@@ -358,7 +388,7 @@ const HookScene: React.FC = () => {
         );
       })}
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", padding: 80 * u }}>
-        <Headline lines={["Running a shop", "never stops."]} delay={10} align="center" accentLine={1} />
+        <Headline lines={t.hook} delay={10} align="center" accentLine={1} />
         <div
           style={{
             marginTop: 40 * u, height: 6 * u, width: interpolate(enter(frame, fps, 40), [0, 1], [0, (vertical ? 520 : 420) * u]),
@@ -408,17 +438,19 @@ const LogoScene: React.FC = () => {
 /** Text block + device, side by side (landscape) or stacked (vertical). */
 const Split: React.FC<{ text: React.ReactNode; device: React.ReactNode; flip?: boolean }> = ({ text, device, flip }) => {
   const { vertical, u } = useLayout();
+  const { rtl } = useL();
+  const rev = rtl ? !flip : flip;
   return (
     <AbsoluteFill
       style={{
-        flexDirection: vertical ? "column" : flip ? "row-reverse" : "row",
+        flexDirection: vertical ? "column" : rev ? "row-reverse" : "row",
         alignItems: "center",
         justifyContent: vertical ? "flex-start" : "space-between",
         padding: vertical ? `${170 * u}px ${70 * u}px 0` : `0 ${130 * u}px`,
         gap: vertical ? 60 * u : 40 * u,
       }}
     >
-      <div style={{ flex: vertical ? "none" : 1, display: "flex", flexDirection: "column", gap: 40 * u }}>{text}</div>
+      <div style={{ flex: vertical ? "none" : 1, display: "flex", flexDirection: "column", gap: 40 * u, direction: rtl ? "rtl" : "ltr" }}>{text}</div>
       <div style={{ flex: vertical ? "none" : 1, display: "flex", justifyContent: "center", alignItems: "center", position: "relative" }}>{device}</div>
     </AbsoluteFill>
   );
@@ -428,6 +460,7 @@ const SellScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { u, vertical } = useLayout();
+  const { t } = useL();
   const phoneW = (vertical ? 560 : 470) * u;
   const toCheckout = interpolate(frame, [100, 122], [0, 1], clamp);
   const tap = interpolate(frame, [186, 196, 214], [0, 1, 0], clamp);
@@ -439,14 +472,14 @@ const SellScene: React.FC = () => {
     <Split
       text={
         <>
-          <Headline lines={["Checkout", "in seconds."]} delay={4} accentLine={1} />
+          <Headline lines={t.sell.head} delay={4} accentLine={1} />
           <div style={{ display: "flex", gap: 18 * u, flexWrap: "wrap" }}>
-            {step(1, "Scan", 18)}
-            {step(2, "Add", 54)}
-            {step(3, "Pay", 92)}
+            {step(1, t.sell.s1, 18)}
+            {step(2, t.sell.s2, 54)}
+            {step(3, t.sell.s3, 92)}
           </div>
           <div style={{ alignSelf: "flex-start" }}>
-            <Chip text="Works fully offline" delay={118} icon={<WifiOff size={38 * u} />} tone="green" />
+            <Chip text={t.sell.offline} delay={118} icon={<WifiOff size={38 * u} />} tone="green" />
           </div>
         </>
       }
@@ -466,8 +499,8 @@ const SellScene: React.FC = () => {
               <div style={{ width: phoneW * 0.34, height: phoneW * 0.34, borderRadius: "50%", background: GREEN, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", scale: interpolate(done, [0, 1], [0.4, 1]), boxShadow: "0 0 80px rgba(74,222,128,0.7)" }}>
                 <Check size={phoneW * 0.2} />
               </div>
-              <div style={{ fontFamily, color: "#fff", fontWeight: 800, fontSize: phoneW * 0.085, marginTop: phoneW * 0.06 }}>Sale complete</div>
-              <div style={{ fontFamily, color: GREEN_LIGHT, fontWeight: 700, fontSize: phoneW * 0.06, marginTop: phoneW * 0.015 }}>Change Rs 416</div>
+              <div style={{ fontFamily, color: "#fff", fontWeight: 800, fontSize: phoneW * 0.085, marginTop: phoneW * 0.06 }}>{t.sell.done}</div>
+              <div style={{ fontFamily, color: GREEN_LIGHT, fontWeight: 700, fontSize: phoneW * 0.06, marginTop: phoneW * 0.015 }}>{t.sell.change}</div>
             </AbsoluteFill>
           </Phone>
         </Float>
@@ -478,11 +511,12 @@ const SellScene: React.FC = () => {
 
 const LedgerScene: React.FC = () => {
   const { u, vertical } = useLayout();
+  const { t } = useL();
   const phoneW = (vertical ? 540 : 470) * u;
   return (
     <Split
       flip
-      text={<Headline lines={["Every udhaar,", "tracked."]} sub="Know exactly who owes what." delay={4} accentLine={1} />}
+      text={<Headline lines={t.ledger.head} sub={t.ledger.sub} delay={4} accentLine={1} />}
       device={
         <div style={{ position: "relative" }}>
           <Float delay={4} tilt={10}>
@@ -508,15 +542,16 @@ const ProfitScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { u, vertical } = useLayout();
+  const { t, rtl } = useL();
   const phoneW = (vertical ? 520 : 440) * u;
   const p = enter(frame, fps, 40);
   return (
     <Split
       text={
         <>
-          <Headline lines={["Real profit.", "Every day."]} delay={4} accentLine={0} />
+          <Headline lines={t.profit.head} delay={4} accentLine={0} />
           <div style={{ fontFamily, opacity: p, translate: `0 ${interpolate(p, [0, 1], [30 * u, 0])}px` }}>
-            <div style={{ fontSize: 28 * u, fontWeight: 700, letterSpacing: 4 * u, color: "rgba(255,255,255,0.6)" }}>NET PROFIT TODAY</div>
+            <div style={{ fontSize: 28 * u, fontWeight: 700, letterSpacing: rtl ? 0 : 4 * u, color: "rgba(255,255,255,0.6)" }}>{t.profit.label}</div>
             <div style={{ fontSize: (vertical ? 150 : 128) * u, fontWeight: 800, color: GREEN_LIGHT, letterSpacing: -4 * u, textShadow: "0 0 60px rgba(74,222,128,0.5)" }}>
               <CountUp to={1988} from={0} to_={80} />
             </div>
@@ -525,12 +560,7 @@ const ProfitScene: React.FC = () => {
       }
       device={
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {!vertical && (
-            <Float delay={10} tilt={-6} style={{ position: "absolute", right: -40 * u, top: -10 * u, opacity: 0.9 }}>
-              <Laptop w={780 * u} src="w-reports.png" />
-            </Float>
-          )}
-          <Float delay={4} tilt={8} style={{ position: "relative", marginLeft: vertical ? 0 : -380 * u, marginTop: vertical ? 0 : 120 * u }}>
+          <Float delay={4} tilt={8} style={{ position: "relative" }}>
             <Phone w={phoneW}>
               <Shot src="p-profit.png" />
               <Hilite x={4} y={17} w={92} h={17} from={20} to={80} radius={8} />
@@ -544,11 +574,12 @@ const ProfitScene: React.FC = () => {
 
 const DevicesScene: React.FC = () => {
   const { u, vertical } = useLayout();
-  const lap = (vertical ? 940 : 1020) * u;
+  const { t, rtl } = useL();
+  const lap = (vertical ? 940 : rtl ? 830 : 1020) * u;
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", padding: vertical ? `0 ${60 * u}px` : 0 }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: (vertical ? 70 : 36) * u }}>
-        <Headline lines={vertical ? ["Phone. Web.", "Computer."] : ["Phone. Web. Computer."]} sub="One shop, always in sync." align="center" delay={4} accentLine={vertical ? 1 : 0} />
+        <Headline lines={vertical ? t.devices.headV : t.devices.head} sub={t.devices.sub} align="center" delay={4} accentLine={vertical ? 1 : 0} />
         <div style={{ position: "relative", display: "flex", justifyContent: "center", marginTop: (vertical ? 20 : 0) * u }}>
           <Float delay={8} tilt={-5}>
             <Laptop w={lap} src="w-sell.png" />
@@ -560,9 +591,9 @@ const DevicesScene: React.FC = () => {
           </Float>
         </div>
         <div style={{ display: "flex", gap: 16 * u, flexWrap: "wrap", justifyContent: "center", marginTop: (vertical ? 60 : 30) * u }}>
-          <Chip text="Staff roles" delay={70} />
-          <Chip text="6 languages" delay={80} />
-          <Chip text="Offline-first" delay={90} tone="green" />
+          <Chip text={t.devices.c1} delay={70} />
+          <Chip text={t.devices.c2} delay={80} />
+          <Chip text={t.devices.c3} delay={90} tone="green" />
         </div>
       </div>
     </AbsoluteFill>
@@ -575,18 +606,19 @@ const CtaScene: React.FC = () => {
   const { u, vertical } = useLayout();
   const p = enter(frame, fps, 24);
   const glow = 0.5 + 0.5 * Math.sin(frame / 8);
-  const q = enter(frame, fps, 40);
+  const { t, rtl } = useL();
+  const q = enter(frame, fps, 16);
   return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", flexDirection: vertical ? "column" : "row", gap: (vertical ? 50 : 130) * u }}>
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", direction: rtl ? "rtl" : "ltr", flexDirection: vertical ? "column" : "row", gap: (vertical ? 50 : 130) * u }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: vertical ? "center" : "flex-start", gap: (vertical ? 44 : 34) * u }}>
         <div style={{ scale: interpolate(enter(frame, fps, 2), [0, 1], [0.6, 1]), opacity: enter(frame, fps, 2), transformOrigin: "left center" }}>
           <LogoBadge size={(vertical ? 220 : 190) * u} />
         </div>
-        <Headline lines={["Start free today."]} align={vertical ? "center" : "left"} delay={10} accentLine={0} />
+        <Headline lines={t.cta.head} align={vertical ? "center" : "left"} delay={10} accentLine={0} />
         {/* Google Play badge (drawn here, not the official artwork) */}
         <div
           style={{
-            fontFamily, display: "flex", alignItems: "center", gap: 24 * u, color: "#fff", background: "#000", border: "2px solid rgba(255,255,255,0.55)",
+            fontFamily, direction: "ltr", display: "flex", alignItems: "center", gap: 24 * u, color: "#fff", background: "#000", border: "2px solid rgba(255,255,255,0.55)",
             padding: `${18 * u}px ${44 * u}px ${18 * u}px ${32 * u}px`, borderRadius: 24 * u, opacity: p, scale: interpolate(p, [0, 1], [0.8, 1]),
             boxShadow: `0 0 ${(30 + glow * 40) * u}px rgba(74,222,128,${0.25 + glow * 0.3})`,
           }}
@@ -602,14 +634,14 @@ const CtaScene: React.FC = () => {
             <div style={{ fontSize: 56 * u, fontWeight: 800, letterSpacing: -1 * u }}>Google Play</div>
           </div>
         </div>
-        <div style={{ fontFamily, fontWeight: 700, fontSize: 36 * u, color: GREEN_LIGHT, opacity: enter(frame, fps, 52) }}>Available now on Google Play</div>
-        <div style={{ fontFamily, fontWeight: 600, fontSize: 30 * u, color: "rgba(255,255,255,0.7)", opacity: enter(frame, fps, 60) }}>Web app: bytepos.vercel.app</div>
+        <div style={{ fontFamily, fontWeight: 700, fontSize: 36 * u, color: GREEN_LIGHT, opacity: enter(frame, fps, 52) }}>{t.cta.avail}</div>
+        <div style={{ fontFamily, fontWeight: 600, fontSize: 30 * u, color: "rgba(255,255,255,0.7)", opacity: enter(frame, fps, 60) }}>{t.cta.web}</div>
       </div>
       <div style={{ fontFamily, display: "flex", flexDirection: "column", alignItems: "center", gap: 22 * u, opacity: q, scale: interpolate(q, [0, 1], [0.85, 1]), translate: `0 ${interpolate(q, [0, 1], [40 * u, 0])}px` }}>
         <div style={{ background: "#fff", padding: 26 * u, borderRadius: 36 * u, boxShadow: `0 0 ${80 * u}px rgba(74,222,128,0.4)` }}>
           <Img src={staticFile("img/play-qr.png")} style={{ width: (vertical ? 340 : 400) * u, height: (vertical ? 340 : 400) * u, display: "block" }} />
         </div>
-        <div style={{ fontSize: 32 * u, fontWeight: 700, color: "#fff" }}>Scan to download</div>
+        <div style={{ fontSize: 32 * u, fontWeight: 700, color: "#fff" }}>{t.cta.scan}</div>
         <div style={{ fontSize: 22 * u, fontWeight: 500, color: "rgba(255,255,255,0.55)" }}>play.google.com · com.mafnankhadim.bytepos</div>
       </div>
     </AbsoluteFill>
@@ -618,9 +650,9 @@ const CtaScene: React.FC = () => {
 
 /* ------------------------------------------------------------------ audio */
 
-const vo = (id: string, at: number) => (
+const vo = (id: string, at: number, dir: string) => (
   <Sequence from={at} layout="none">
-    <Audio src={staticFile(`vo/${id}.wav`)} volume={1} />
+    <Audio src={staticFile(`${dir}/${id}.wav`)} volume={1} />
   </Sequence>
 );
 const sfx = (name: string, at: number, volume = 0.7) => (
@@ -629,52 +661,59 @@ const sfx = (name: string, at: number, volume = 0.7) => (
   </Sequence>
 );
 
-/** Voice windows (frame, frame) where the music ducks. */
-const VOICE: [number, number][] = [[12, 82], [147, 258], [285, 414], [582, 688], [792, 884], [1002, 1143], [1200, 1343]];
-const musicVolume = (f: number) => {
-  const inVoice = VOICE.some(([a, b]) => f >= a && f <= b);
-  const near = Math.min(...VOICE.map(([a, b]) => (f < a ? a - f : f > b ? f - b : 0)));
+/** Voice start frames and the windows (frame, frame) where the music ducks, per language. */
+const VO_AT: Record<Lang, number[]> = { en: [12, 147, 285, 582, 792, 1002, 1200], ur: [12, 147, 285, 582, 792, 1002, 1198] };
+const VOICE: Record<Lang, [number, number][]> = {
+  en: [[12, 82], [147, 258], [285, 414], [582, 688], [792, 884], [1002, 1143], [1200, 1343]],
+  ur: [[12, 62], [147, 260], [285, 418], [582, 694], [792, 840], [1002, 1115], [1198, 1348]],
+};
+const musicVolume = (f: number, voice: [number, number][]) => {
+  const inVoice = voice.some(([a, b]) => f >= a && f <= b);
+  const near = Math.min(...voice.map(([a, b]) => (f < a ? a - f : f > b ? f - b : 0)));
   const duck = inVoice ? 0.55 : interpolate(near, [0, 18], [0.55, 1], clamp);
-  return 0.5 * duck;
+  return 0.2 * duck;
 };
 
-const AudioTrack: React.FC = () => (
+const AudioTrack: React.FC = () => {
+  const { lang } = useL();
+  const dir = lang === "ur" ? "vo-ur" : "vo";
+  const at = VO_AT[lang];
+  return (
   <>
-    <Audio src={staticFile("music/bed.wav")} volume={(f) => musicVolume(f)} />
-    {vo("01", 12)}
-    {vo("02", 147)}
-    {vo("03", 285)}
-    {vo("04", 582)}
-    {vo("05", 792)}
-    {vo("06", 1002)}
-    {vo("07", 1200)}
-    {sfx("whoosh", 4, 0.5)}
-    {sfx("riser", 82, 0.55)}
-    {sfx("hit", 146, 0.9)}
-    {sfx("whoosh", 266, 0.55)}
-    {sfx("beep", 285 + 48, 0.6)}
-    {sfx("click", 285 + 84, 0.7)}
-    {sfx("whoosh", 285 + 100, 0.35)}
-    {sfx("click", 285 + 190, 0.8)}
-    {sfx("ding", 285 + 200, 0.75)}
-    {sfx("whoosh", 566, 0.55)}
-    {sfx("click", 570 + 40, 0.5)}
-    {sfx("click", 570 + 72, 0.5)}
-    {sfx("whoosh", 776, 0.55)}
-    {sfx("ding", 780 + 80, 0.5)}
-    {sfx("whoosh", 986, 0.55)}
-    {sfx("click", 990 + 70, 0.5)}
-    {sfx("click", 990 + 80, 0.5)}
-    {sfx("click", 990 + 90, 0.5)}
-    {sfx("whoosh", 1201, 0.55)}
-    {sfx("hit", 1206, 0.8)}
-    {sfx("ding", 1205 + 24, 0.6)}
+    <Audio src={staticFile("music/bed.wav")} volume={(f) => musicVolume(f, VOICE[lang])} />
+    {vo("01", at[0], dir)}
+    {vo("02", at[1], dir)}
+    {vo("03", at[2], dir)}
+    {vo("04", at[3], dir)}
+    {vo("05", at[4], dir)}
+    {vo("06", at[5], dir)}
+    {vo("07", at[6], dir)}
+    {sfx("whoosh", 4, 0.1)}
+    {sfx("whoosh", 266, 0.1)}
+    {sfx("beep", 285 + 48, 0.1)}
+    {sfx("click", 285 + 84, 0.1)}
+    {sfx("whoosh", 285 + 100, 0.1)}
+    {sfx("click", 285 + 190, 0.1)}
+    {sfx("ding", 285 + 200, 0.12)}
+    {sfx("whoosh", 566, 0.1)}
+    {sfx("click", 570 + 40, 0.1)}
+    {sfx("click", 570 + 72, 0.1)}
+    {sfx("whoosh", 776, 0.1)}
+    {sfx("ding", 780 + 80, 0.12)}
+    {sfx("whoosh", 986, 0.1)}
+    {sfx("click", 990 + 70, 0.1)}
+    {sfx("click", 990 + 80, 0.1)}
+    {sfx("click", 990 + 90, 0.1)}
+    {sfx("whoosh", 1201, 0.1)}
+    {sfx("ding", 1205 + 24, 0.12)}
   </>
-);
+  );
+};
 
 /* ------------------------------------------------------------------ root */
 
-export const Ad: React.FC = () => (
+export const Ad: React.FC<{ lang?: Lang }> = ({ lang = "en" }) => (
+  <LangCtx.Provider value={{ lang, rtl: lang === "ur", t: STR[lang] }}>
   <AbsoluteFill style={{ background: INK }}>
     <Background />
     <Scene range={S.hook}><HookScene /></Scene>
@@ -683,8 +722,9 @@ export const Ad: React.FC = () => (
     <Scene range={S.ledger}><LedgerScene /></Scene>
     <Scene range={S.profit}><ProfitScene /></Scene>
     <Scene range={S.devices}><DevicesScene /></Scene>
-    <Scene range={S.cta}><CtaScene /></Scene>
+    <Scene range={S.cta} hold><CtaScene /></Scene>
     <Vignette />
     <AudioTrack />
   </AbsoluteFill>
+  </LangCtx.Provider>
 );
