@@ -1,0 +1,9 @@
+node_modules
+dist
+.DS_Store
+.env
+
+# Keep the finished MP4s; ignore scratch renders and logs.
+out/stills
+out/*.log
+out/render.done
