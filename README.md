@@ -7,12 +7,21 @@ Get the app: [Google Play](https://play.google.com/store/apps/details?id=com.maf
 
 ## Videos (click a picture to play)
 
+**Dark theme**
+
 | | English | اردو |
 |---|---|---|
 | **16:9** | [![BytePOS ad, 16:9](docs/thumbs/BytePOS-Ad-16x9.jpg)](out/BytePOS-Ad-16x9.mp4) | [![BytePOS ad, 16:9, Urdu](docs/thumbs/BytePOS-Ad-16x9-Urdu.jpg)](out/BytePOS-Ad-16x9-Urdu.mp4) |
 | **9:16** | [![BytePOS ad, 9:16](docs/thumbs/BytePOS-Ad-9x16.jpg)](out/BytePOS-Ad-9x16.mp4) | [![BytePOS ad, 9:16, Urdu](docs/thumbs/BytePOS-Ad-9x16-Urdu.jpg)](out/BytePOS-Ad-9x16-Urdu.mp4) |
 
-Files are in [`out/`](out). Light-theme versions are added there as they are finished.
+**Light theme**
+
+| | English | اردو |
+|---|---|---|
+| **16:9** | [![BytePOS ad, 16:9, light](docs/thumbs/BytePOS-Ad-16x9-Light.jpg)](out/BytePOS-Ad-16x9-Light.mp4) | [![BytePOS ad, 16:9, Urdu, light](docs/thumbs/BytePOS-Ad-16x9-Urdu-Light.jpg)](out/BytePOS-Ad-16x9-Urdu-Light.mp4) |
+| **9:16** | [![BytePOS ad, 9:16, light](docs/thumbs/BytePOS-Ad-9x16-Light.jpg)](out/BytePOS-Ad-9x16-Light.mp4) | [![BytePOS ad, 9:16, Urdu, light](docs/thumbs/BytePOS-Ad-9x16-Urdu-Light.jpg)](out/BytePOS-Ad-9x16-Urdu-Light.mp4) |
+
+Files are in [`out/`](out).
 
 ## Ad images
 
@@ -43,6 +52,6 @@ npm install
 npx remotion studio                                        # preview
 npx remotion render BytePOS-Landscape out/BytePOS-Ad-16x9.mp4
 npx remotion render BytePOS-Vertical  out/BytePOS-Ad-9x16.mp4
-# Urdu: BytePOS-Landscape-UR / BytePOS-Vertical-UR · light theme: add -Light
+# Urdu: BytePOS-Landscape-UR / BytePOS-Vertical-UR · light theme: add -Light (e.g. BytePOS-Landscape-UR-Light)
 npx remotion still AdImage-Wide-Light out/ads/BytePOS-Ad-Wide-Light.png --frame=60
 ```

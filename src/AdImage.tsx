@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
-import { Background, GREEN_LIGHT, Laptop, LogoBadge, Phone, Shot, Wordmark, fontFamily } from "./Ad";
+import { Background, GREEN_LIGHT, Laptop, LightBackground, LogoBadge, Phone, Shot, Wordmark, fontFamily } from "./Ad";
 
 export type AdTheme = "dark" | "light";
 export type AdLang = "en" | "ur";
@@ -14,18 +14,6 @@ const tokens = (light: boolean) =>
     ? { head: "#0B1A10", accent: "#15803D", sub: "#4B5B50", pillBg: "#EEF4F0", pillBorder: "#D5E2D9", pillText: "#0B1A10", green: "#16A34A", onGreen: "#fff", qrBorder: "1.5px solid #DCE7E0", label: "#0B1A10" }
     : { head: "#fff", accent: GREEN_LIGHT, sub: "rgba(255,255,255,0.75)", pillBg: "rgba(255,255,255,0.09)", pillBorder: "rgba(255,255,255,0.2)", pillText: "#fff", green: GREEN_LIGHT, onGreen: "#04210f", qrBorder: "none", label: "#fff" };
 type Tokens = ReturnType<typeof tokens>;
-
-const LightBackground: React.FC = () => (
-  <AbsoluteFill style={{ background: "#FFFFFF" }}>
-    <AbsoluteFill style={{ background: "radial-gradient(60% 50% at 12% 8%, rgba(22,163,74,0.14), transparent 70%), radial-gradient(55% 45% at 95% 95%, rgba(74,222,128,0.18), transparent 70%)" }} />
-    <AbsoluteFill
-      style={{
-        backgroundImage: "linear-gradient(rgba(10,40,20,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(10,40,20,0.045) 1px, transparent 1px)",
-        backgroundSize: "90px 90px", maskImage: "radial-gradient(75% 65% at 50% 45%, black, transparent)",
-      }}
-    />
-  </AbsoluteFill>
-);
 
 const Pill: React.FC<{ text: string; u: number; c: Tokens; green?: boolean }> = ({ text, u, c, green }) => (
   <div

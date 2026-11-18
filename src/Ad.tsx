@@ -46,6 +46,14 @@ const STR = {
 const LangCtx = React.createContext<{ lang: Lang; rtl: boolean; t: typeof STR.en }>({ lang: "en", rtl: false, t: STR.en });
 const useL = () => React.useContext(LangCtx);
 
+export type VideoTheme = "dark" | "light";
+const THEME = {
+  dark: { light: false, head: "#fff", accent: GREEN_LIGHT, sub: "rgba(255,255,255,0.72)", faint: "rgba(255,255,255,0.55)", chipBg: "rgba(255,255,255,0.09)", chipBorder: "1.5px solid rgba(255,255,255,0.18)", chipText: "#fff", chipShadow: "0 12px 40px rgba(0,0,0,0.35)", greenBg: GREEN_LIGHT, onGreen: "#04210f", greenGlow: "rgba(74,222,128,0.45)", hookText: "rgba(255,255,255,0.4)", hookBorder: "rgba(255,255,255,0.14)", hookBg: "rgba(255,255,255,0.04)", ring: "74,222,128", bg: INK },
+  light: { light: true, head: "#0B1A10", accent: "#15803D", sub: "rgba(11,26,16,0.72)", faint: "rgba(11,26,16,0.55)", chipBg: "#EEF4F0", chipBorder: "1.5px solid #D5E2D9", chipText: "#0B1A10", chipShadow: "0 10px 30px rgba(15,40,25,0.12)", greenBg: "#16A34A", onGreen: "#fff", greenGlow: "rgba(22,163,74,0.3)", hookText: "rgba(11,26,16,0.45)", hookBorder: "rgba(11,26,16,0.14)", hookBg: "rgba(11,26,16,0.04)", ring: "22,163,74", bg: "#FFFFFF" },
+};
+const ThemeCtx = React.createContext(THEME.dark);
+const useTheme = () => React.useContext(ThemeCtx);
+
 const EASE = Easing.bezier(0.16, 1, 0.3, 1);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
@@ -105,6 +113,18 @@ export const Background: React.FC = () => {
   );
 };
 
+export const LightBackground: React.FC = () => (
+  <AbsoluteFill style={{ background: "#FFFFFF" }}>
+    <AbsoluteFill style={{ background: "radial-gradient(60% 50% at 12% 8%, rgba(22,163,74,0.14), transparent 70%), radial-gradient(55% 45% at 95% 95%, rgba(74,222,128,0.18), transparent 70%)" }} />
+    <AbsoluteFill
+      style={{
+        backgroundImage: "linear-gradient(rgba(10,40,20,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(10,40,20,0.045) 1px, transparent 1px)",
+        backgroundSize: "90px 90px", maskImage: "radial-gradient(75% 65% at 50% 45%, black, transparent)",
+      }}
+    />
+  </AbsoluteFill>
+);
+
 export const Vignette: React.FC = () => (
   <AbsoluteFill
     style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)", pointerEvents: "none" }}
@@ -122,6 +142,7 @@ const Scene: React.FC<{ range: readonly [number, number]; hold?: boolean; childr
 };
 const SceneInner: React.FC<{ dur: number; hold?: boolean; children: React.ReactNode }> = ({ dur, hold, children }) => {
   const frame = useCurrentFrame();
+  const th = useTheme();
   const inP = interpolate(frame, [0, 14], [0, 1], { ...clamp, easing: EASE });
   const outP = hold ? 1 : interpolate(frame, [dur - 12, dur], [1, 0], clamp);
   const flash = interpolate(frame, [0, 4, 16], [0, 0.35, 0], clamp);
@@ -134,7 +155,7 @@ const SceneInner: React.FC<{ dur: number; hold?: boolean; children: React.ReactN
       }}
     >
       {children}
-      <AbsoluteFill style={{ background: `radial-gradient(circle at 50% 50%, rgba(74,222,128,${flash}), transparent 70%)` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle at 50% 50%, rgba(${th.ring},${flash * (th.light ? 0.4 : 1)}), transparent 70%)` }} />
     </AbsoluteFill>
   );
 };
@@ -150,6 +171,7 @@ const Headline: React.FC<{
   const { fps } = useVideoConfig();
   const { u, vertical } = useLayout();
   const { rtl } = useL();
+  const th = useTheme();
   return (
     <div style={{ fontFamily, direction: rtl ? "rtl" : "ltr", textAlign: align === "left" && rtl ? "right" : align, display: "flex", flexDirection: "column", gap: 10 * u }}>
       {lines.map((line, i) => {
@@ -162,7 +184,7 @@ const Headline: React.FC<{
               lineHeight: rtl ? 1.4 : 1.04,
               fontWeight: 800,
               letterSpacing: rtl ? 0 : -2 * u,
-              color: i === accentLine ? GREEN_LIGHT : "#fff",
+              color: i === accentLine ? th.accent : th.head,
               opacity: p,
               translate: `0 ${interpolate(p, [0, 1], [50 * u, 0])}px`,
               filter: `blur(${interpolate(p, [0, 1], [14, 0])}px)`,
@@ -178,7 +200,7 @@ const Headline: React.FC<{
             marginTop: 14 * u,
             fontSize: (vertical ? 44 : 38) * u,
             fontWeight: 500,
-            color: "rgba(255,255,255,0.72)",
+            color: th.sub,
             opacity: enter(frame, fps, delay + lines.length * 7 + 6),
           }}
         >
@@ -198,6 +220,7 @@ const Chip: React.FC<{ text: string; delay: number; icon?: React.ReactNode; tone
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { u } = useLayout();
+  const th = useTheme();
   const p = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 140 } });
   return (
     <div
@@ -210,10 +233,10 @@ const Chip: React.FC<{ text: string; delay: number; icon?: React.ReactNode; tone
         borderRadius: 999,
         fontSize: 34 * u,
         fontWeight: 700,
-        color: tone === "green" ? "#04210f" : "#fff",
-        background: tone === "green" ? GREEN_LIGHT : "rgba(255,255,255,0.09)",
-        border: tone === "green" ? "none" : "1.5px solid rgba(255,255,255,0.18)",
-        boxShadow: tone === "green" ? `0 0 ${50 * u}px rgba(74,222,128,0.45)` : "0 12px 40px rgba(0,0,0,0.35)",
+        color: tone === "green" ? th.onGreen : th.chipText,
+        background: tone === "green" ? th.greenBg : th.chipBg,
+        border: tone === "green" ? "none" : th.chipBorder,
+        boxShadow: tone === "green" ? `0 0 ${50 * u}px ${th.greenGlow}` : th.chipShadow,
         backdropFilter: "blur(14px)",
         opacity: Math.min(1, p * 1.4),
         scale: interpolate(p, [0, 1], [0.6, 1]),
@@ -227,6 +250,7 @@ const Chip: React.FC<{ text: string; delay: number; icon?: React.ReactNode; tone
 };
 
 export const Phone: React.FC<{ w: number; children: React.ReactNode; style?: React.CSSProperties }> = ({ w, children, style }) => {
+  const th = useTheme();
   const bez = w * 0.028;
   return (
     <div
@@ -236,7 +260,7 @@ export const Phone: React.FC<{ w: number; children: React.ReactNode; style?: Rea
         borderRadius: w * 0.15,
         background: "linear-gradient(145deg, #2a312d, #0a0d0b 40%, #1c211e)",
         padding: bez,
-        boxShadow: `0 ${w * 0.12}px ${w * 0.35}px rgba(0,0,0,0.65), 0 0 ${w * 0.5}px rgba(22,163,74,0.28)`,
+        boxShadow: th.light ? `0 ${w * 0.1}px ${w * 0.25}px rgba(15,40,25,0.3), 0 8px 24px rgba(15,40,25,0.18)` : `0 ${w * 0.12}px ${w * 0.35}px rgba(0,0,0,0.65), 0 0 ${w * 0.5}px rgba(22,163,74,0.28)`,
         position: "relative",
         ...style,
       }}
@@ -287,6 +311,8 @@ const Hilite: React.FC<{ x: number; y: number; w: number; h: number; from: numbe
 };
 
 export const Laptop: React.FC<{ w: number; src: string; style?: React.CSSProperties; soft?: boolean }> = ({ w, src, style, soft }) => {
+  const th = useTheme();
+  const isSoft = soft ?? th.light;
   const bez = w * 0.012;
   return (
     <div style={{ width: w, position: "relative", ...style }}>
@@ -297,7 +323,7 @@ export const Laptop: React.FC<{ w: number; src: string; style?: React.CSSPropert
           borderRadius: w * 0.02,
           background: "#0c0f0d",
           padding: bez,
-          boxShadow: soft ? `0 ${w * 0.04}px ${w * 0.1}px rgba(15,40,25,0.3)` : `0 ${w * 0.05}px ${w * 0.15}px rgba(0,0,0,0.6), 0 0 ${w * 0.2}px rgba(22,163,74,0.25)`,
+          boxShadow: isSoft ? `0 ${w * 0.04}px ${w * 0.1}px rgba(15,40,25,0.3)` : `0 ${w * 0.05}px ${w * 0.15}px rgba(0,0,0,0.6), 0 0 ${w * 0.2}px rgba(22,163,74,0.25)`,
           border: "1px solid rgba(255,255,255,0.12)",
         }}
       >
@@ -366,6 +392,7 @@ const HookScene: React.FC = () => {
   const { fps } = useVideoConfig();
   const { width, height, u, vertical } = useLayout();
   const { t } = useL();
+  const th = useTheme();
   const chips = t.hookChips;
   return (
     <AbsoluteFill>
@@ -378,8 +405,8 @@ const HookScene: React.FC = () => {
             key={c}
             style={{
               position: "absolute", left: x, top: y, fontFamily, fontWeight: 700, fontSize: (28 + (i % 3) * 8) * u,
-              color: "rgba(255,255,255,0.4)", padding: `${10 * u}px ${22 * u}px`, borderRadius: 999,
-              border: "1.5px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.04)",
+              color: th.hookText, padding: `${10 * u}px ${22 * u}px`, borderRadius: 999,
+              border: `1.5px solid ${th.hookBorder}`, background: th.hookBg,
               filter: `blur(${(i % 3) * 1.5}px)`, opacity: interpolate(y, [0, height * 0.2, height * 0.8, height], [0, 1, 1, 0], clamp),
             }}
           >
@@ -392,7 +419,7 @@ const HookScene: React.FC = () => {
         <div
           style={{
             marginTop: 40 * u, height: 6 * u, width: interpolate(enter(frame, fps, 40), [0, 1], [0, (vertical ? 520 : 420) * u]),
-            borderRadius: 99, background: `linear-gradient(90deg, transparent, ${GREEN_LIGHT}, transparent)`,
+            borderRadius: 99, background: `linear-gradient(90deg, transparent, ${th.accent}, transparent)`,
           }}
         />
       </AbsoluteFill>
@@ -405,6 +432,7 @@ const LogoScene: React.FC = () => {
   const { fps } = useVideoConfig();
   const { u } = useLayout();
   const p = spring({ frame: frame - 14, fps, config: { damping: 12, stiffness: 90 } });
+  const th = useTheme();
   const ring = interpolate(frame, [14, 70], [0, 1], { ...clamp, easing: EASE });
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 36 * u }}>
@@ -414,18 +442,18 @@ const LogoScene: React.FC = () => {
             key={i}
             style={{
               position: "absolute", inset: -240 * u * ring * (1 + i * 0.5), borderRadius: "50%",
-              border: `${3 * u}px solid rgba(74,222,128,${0.5 * (1 - ring)})`,
+              border: `${3 * u}px solid rgba(${th.ring},${0.5 * (1 - ring)})`,
             }}
           />
         ))}
         <LogoBadge size={300 * u} />
       </div>
       <div style={{ opacity: enter(frame, fps, 30), translate: `0 ${interpolate(enter(frame, fps, 30), [0, 1], [40 * u, 0])}px`, filter: `blur(${interpolate(enter(frame, fps, 30), [0, 1], [12, 0])}px)` }}>
-        <Wordmark size={150 * u} />
+        <Wordmark size={150 * u} ink={th.head} accent={th.accent} />
       </div>
       <div
         style={{
-          fontFamily, fontWeight: 700, fontSize: 36 * u, letterSpacing: 14 * u, color: "rgba(255,255,255,0.8)",
+          fontFamily, fontWeight: 700, fontSize: 36 * u, letterSpacing: 14 * u, color: th.sub,
           opacity: enter(frame, fps, 48), translate: `0 ${interpolate(enter(frame, fps, 48), [0, 1], [30 * u, 0])}px`,
         }}
       >
@@ -543,6 +571,7 @@ const ProfitScene: React.FC = () => {
   const { fps } = useVideoConfig();
   const { u, vertical } = useLayout();
   const { t, rtl } = useL();
+  const th = useTheme();
   const phoneW = (vertical ? 520 : 440) * u;
   const p = enter(frame, fps, 40);
   return (
@@ -551,8 +580,8 @@ const ProfitScene: React.FC = () => {
         <>
           <Headline lines={t.profit.head} delay={4} accentLine={0} />
           <div style={{ fontFamily, opacity: p, translate: `0 ${interpolate(p, [0, 1], [30 * u, 0])}px` }}>
-            <div style={{ fontSize: 28 * u, fontWeight: 700, letterSpacing: rtl ? 0 : 4 * u, color: "rgba(255,255,255,0.6)" }}>{t.profit.label}</div>
-            <div style={{ fontSize: (vertical ? 150 : 128) * u, fontWeight: 800, color: GREEN_LIGHT, letterSpacing: -4 * u, textShadow: "0 0 60px rgba(74,222,128,0.5)" }}>
+            <div style={{ fontSize: 28 * u, fontWeight: 700, letterSpacing: rtl ? 0 : 4 * u, color: th.faint }}>{t.profit.label}</div>
+            <div style={{ fontSize: (vertical ? 150 : 128) * u, fontWeight: 800, color: th.accent, letterSpacing: -4 * u, textShadow: th.light ? "none" : "0 0 60px rgba(74,222,128,0.5)" }}>
               <CountUp to={1988} from={0} to_={80} />
             </div>
           </div>
@@ -607,6 +636,7 @@ const CtaScene: React.FC = () => {
   const p = enter(frame, fps, 24);
   const glow = 0.5 + 0.5 * Math.sin(frame / 8);
   const { t, rtl } = useL();
+  const th = useTheme();
   const q = enter(frame, fps, 16);
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", direction: rtl ? "rtl" : "ltr", flexDirection: vertical ? "column" : "row", gap: (vertical ? 50 : 130) * u }}>
@@ -634,15 +664,15 @@ const CtaScene: React.FC = () => {
             <div style={{ fontSize: 56 * u, fontWeight: 800, letterSpacing: -1 * u }}>Google Play</div>
           </div>
         </div>
-        <div style={{ fontFamily, fontWeight: 700, fontSize: 36 * u, color: GREEN_LIGHT, opacity: enter(frame, fps, 52) }}>{t.cta.avail}</div>
-        <div style={{ fontFamily, fontWeight: 600, fontSize: 30 * u, color: "rgba(255,255,255,0.7)", opacity: enter(frame, fps, 60) }}>{t.cta.web}</div>
+        <div style={{ fontFamily, fontWeight: 700, fontSize: 36 * u, color: th.accent, opacity: enter(frame, fps, 52) }}>{t.cta.avail}</div>
+        <div style={{ fontFamily, fontWeight: 600, fontSize: 30 * u, color: th.sub, opacity: enter(frame, fps, 60) }}>{t.cta.web}</div>
       </div>
       <div style={{ fontFamily, display: "flex", flexDirection: "column", alignItems: "center", gap: 22 * u, opacity: q, scale: interpolate(q, [0, 1], [0.85, 1]), translate: `0 ${interpolate(q, [0, 1], [40 * u, 0])}px` }}>
-        <div style={{ background: "#fff", padding: 26 * u, borderRadius: 36 * u, boxShadow: `0 0 ${80 * u}px rgba(74,222,128,0.4)` }}>
+        <div style={{ background: "#fff", padding: 26 * u, borderRadius: 36 * u, border: th.light ? "1.5px solid #DCE7E0" : "none", boxShadow: th.light ? "0 18px 50px rgba(15,40,25,0.18)" : `0 0 ${80 * u}px rgba(74,222,128,0.4)` }}>
           <Img src={staticFile("img/play-qr.png")} style={{ width: (vertical ? 340 : 400) * u, height: (vertical ? 340 : 400) * u, display: "block" }} />
         </div>
-        <div style={{ fontSize: 32 * u, fontWeight: 700, color: "#fff" }}>{t.cta.scan}</div>
-        <div style={{ fontSize: 22 * u, fontWeight: 500, color: "rgba(255,255,255,0.55)" }}>play.google.com · com.mafnankhadim.bytepos</div>
+        <div style={{ fontSize: 32 * u, fontWeight: 700, color: th.head }}>{t.cta.scan}</div>
+        <div style={{ fontSize: 22 * u, fontWeight: 500, color: th.faint }}>play.google.com · com.mafnankhadim.bytepos</div>
       </div>
     </AbsoluteFill>
   );
@@ -712,10 +742,11 @@ const AudioTrack: React.FC = () => {
 
 /* ------------------------------------------------------------------ root */
 
-export const Ad: React.FC<{ lang?: Lang }> = ({ lang = "en" }) => (
+export const Ad: React.FC<{ lang?: Lang; theme?: VideoTheme }> = ({ lang = "en", theme = "dark" }) => (
   <LangCtx.Provider value={{ lang, rtl: lang === "ur", t: STR[lang] }}>
-  <AbsoluteFill style={{ background: INK }}>
-    <Background />
+  <ThemeCtx.Provider value={THEME[theme]}>
+  <AbsoluteFill style={{ background: THEME[theme].bg }}>
+    {theme === "light" ? <LightBackground /> : <Background />}
     <Scene range={S.hook}><HookScene /></Scene>
     <Scene range={S.logo}><LogoScene /></Scene>
     <Scene range={S.sell}><SellScene /></Scene>
@@ -723,8 +754,9 @@ export const Ad: React.FC<{ lang?: Lang }> = ({ lang = "en" }) => (
     <Scene range={S.profit}><ProfitScene /></Scene>
     <Scene range={S.devices}><DevicesScene /></Scene>
     <Scene range={S.cta} hold><CtaScene /></Scene>
-    <Vignette />
+    {theme === "dark" && <Vignette />}
     <AudioTrack />
   </AbsoluteFill>
+  </ThemeCtx.Provider>
   </LangCtx.Provider>
 );
